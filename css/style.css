@@ -10,6 +10,10 @@
    font-weight: 800;
 }
 
+#highlight {
+   border-width: 10px;
+}
+
 .game-board>* {
    display: flex;
    align-content: center;

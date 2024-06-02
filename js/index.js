@@ -51,7 +51,6 @@ class Player {
    constructor(name_in) {
       this.name = name_in
       this.index = Number(name_in.slice(1, 2))
-      this.win = false;
       this.pieces = new Array(10);
       this.p_board = [];
       for (let i = 0; i < 17; i++) {
@@ -308,7 +307,15 @@ class Bot extends Player {
 
 };
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+const moveStates = Object.freeze({
+   UNMOVED: 'unmoved',
+   SLID: 'slid',
+   JUMPING: 'jumping'
+});
 
 class Human extends Player {
    constructor(name_in) {
@@ -316,7 +323,15 @@ class Human extends Player {
    }
 
    turn(board_in) {
+      let i = this.index;
+      this.index = 0;
       super.update_pboard(JSON.parse(board_in));
+      this.index = i;
+      this.move = {
+         piece: -1,
+         state: moveStates.UNMOVED,
+
+      }
       return false;
    }
 }
@@ -332,12 +347,14 @@ class Nap extends Player {
    }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function Spot(props) {
    return (
       <button
          className={props.value}
+         name={'[' + props.location[0] + ',' + props.location[1] + ']'} //string of location array, personally I think to be pretty clever
          onClick={props.onClick}
       >
          {"" + props.location[0] + " " + props.location[1]}
@@ -375,18 +392,88 @@ class Board extends React.Component {
       }
    }
 
+   highlight(a, b) {
+      let pieces = document.querySelectorAll(".row>*");
+      pieces.forEach(function (piece) {
+         piece.removeAttribute('id');
+         if (JSON.parse(piece.name)[0] === a && JSON.parse(piece.name)[1] === b) {
+            piece.id = "highlight";
+         }
+      });
+   }
+
    handleClick(a, b) {
-      /*
-      const squares = this.state.squares.slice();
-      if (calculateWinner(squares) || squares[i]) {
+      let player = this.Players[this.state.turn];
+      //ensure we are working with a human
+      if (player.constructor.name !== 'Human') {
          return;
       }
-      squares[i] = this.state.xIsNext ? 'X' : 'O';
+      let index = player.pieces.findIndex((element) => element[0] === a && element[1] == b);
+      //check if a piece or if a space (returns false if index == -1)
+      if (index + 1) { //piece
+         //reset to old board using player.p_board (which was set at the beginning of the turn)
+         this.state.spots = JSON.parse(JSON.stringify(player.p_board));
+         player.update_pboard(JSON.parse(JSON.stringify(player.p_board)));
+         //unhighlight all the pieces except selected piece, which must be highlighted
+         if (index != player.move.piece) {
+            this.highlight(a, b);
+         } else {
+            let pieces = document.querySelectorAll("." + this.Players[this.state.turn].name);
+            pieces.forEach(function (piece) {
+               piece.removeAttribute('id');
+            });
+         }
+         player.move.state = moveStates.UNMOVED;
+         player.move.piece = index;
+      }
+      else { //space
+         if (player.move.piece === -1) {
+            //you haven't selected a piece to move yet
+            alert("Select a piece to move first");
+            return;
+         }
+         //check if valid place to move on according to unupdated move state;
+         for (let i = 0; i < 6; i++) {
+            let p = player.pieces[player.move.piece]; //loc array
+            //check valid slide
+            if (a === p[0] + mc[i][0]
+               && b === p[1] + mc[i][1]
+               && this.state.spots[a][b] === "pos") {
+               switch (player.move.state) {
+                  case (moveStates.JUMPING): alert("You cannot slide a piece after jumping it! Click a piece to reset your move.");
+                  case (moveStates.SLID): alert("You cannot slide a piece twice! Click a piece to reset your move.");
+                  case (moveStates.UNMOVED): {
+                     player.move.state = moveStates.SLID;
+                     //move the piece (update board)
+                     this.state.spots[a][b] = player.name;
+                     this.state.spots[p[0]][p[1]] = "pos";
+                     player.pieces[player.move.piece] = [a, b]
+                     this.highlight(a, b);
+                  }
+               }
+            }
+            //check valid jump
+            if (a === p[0] + 2 * mc[i][0]
+               && b === p[1] + 2 * mc[i][1]
+               && this.state.spots[a][b] === "pos"
+               && this.state.spots[p[0] + mc[i][0]][p[1] + mc[i][1]] !== "pos") {
+               if (player.move.state === moveStates.SLID) {
+                  alert("You cannot jump a piece after sliding it! Click a piece to reset your move.");
+               } else {
+                  player.move.state = moveStates.JUMPING;
+                  //move the piece (update board)
+                  this.state.spots[a][b] = player.name;
+                  this.state.spots[p[0]][p[1]] = "pos";
+                  player.pieces[player.move.piece] = [a, b]
+                  this.highlight(a, b);
+               }
+            }
+         }
+      }
       this.setState({
-         squares: squares,
-         xIsNext: !this.state.xIsNext,
+         spots: this.state.spots,
+         turn: this.state.turn,
       });
-      */
    }
 
    renderSpots(a, b) {
@@ -412,10 +499,6 @@ class Board extends React.Component {
       let y2 = 8 * t[3] + y[0] * t[4] + y[1] * t[5];
       spots[y1][y2] = this.Players[index].name
       this.state.spots = spots;
-   }
-
-   human_move(index) {
-
    }
 
    winner(index) {
@@ -449,40 +532,57 @@ class Board extends React.Component {
          turn: this.state.turn,
       });
       numplayers = (numplayers <= 1) ? 2 : numplayers;
-      let index = 5;
-      let x = 0;
-      //put some sorta promise thing here so that user can update board for each turn
-      while (!this.winner(index)) {
-         x++
-         if (x > max) {
-            break;
-         }
-         index = (index + 1) % 6;
-         this.state.turn = index;
-         let move = this.Players[index].turn(JSON.stringify(this.state.spots));
-         if (move) {
-            this.bot_move(index, move);
-            console.log(index, move, x);
-         } else if (this.Players[index].constructor.name === 'Human') {
-            this.human_move(index);
-         }
-      }
-      index++;
+      this.complete_bots();
+      this.Players[this.state.turn].turn(JSON.stringify(this.state.spots)); //updates next human's pieces
       this.setState({
          spots: this.state.spots,
          turn: this.state.turn,
       });
-      alert("player" + index + " wins! " + x);
+   }
+
+   complete_bots() {
+      while (!(this.Players[this.state.turn].constructor.name === 'Human')) {
+         let move = this.Players[this.state.turn].turn(JSON.stringify(this.state.spots));
+         if (move) {
+            this.bot_move(this.state.turn, move); //this would be a good place to insert some sorta animation
+         }
+         if (this.winner(this.state.turn)) {
+            this.setState({
+               spots: this.state.spots,
+               turn: this.state.turn,
+            });
+            alert("player" + (this.state.turn + 1) + " wins! ");
+            return;
+         }
+         this.state.turn = (this.state.turn + 1) % 6;
+      }
    }
 
    execute_turn() {
-      //   while (!(this.Players[this.state.turn].constructor.name === 'Human')) {
-      //      let move = this.Players[this.state.turn].turn(JSON.stringify(this.state.spots));
-      //      if (move) {
-      //         this.bot_move(this.state.turn, move); //this would be a good place to insert some sorta animation
-      //      }
-      //      index = (index + 1) % 6;
-      //   }
+      //check to see if you've moved your pieces yet
+      if (this.Players[this.state.turn].move.state === moveStates.UNMOVED) {
+         alert("Please move a piece before submitting!");
+         return;
+      }
+      //unhighlight the selected piece
+      let pieces = document.querySelectorAll("." + this.Players[this.state.turn].name);
+      pieces.forEach(function (piece) {
+         piece.removeAttribute('id');
+      });
+      //execute human turn
+      //...TODO...
+      //execute bot turns until next human turn
+      if (this.winner(this.state.turn)) {
+         alert("Player" + (this.state.turn + 1) + " wins! ");
+         return;
+      }
+      this.state.turn = (this.state.turn + 1) % 6;
+      this.complete_bots();
+      this.Players[this.state.turn].turn(JSON.stringify(this.state.spots)); //updates next human's pieces
+      this.setState({
+         spots: this.state.spots,
+         turn: this.state.turn,
+      });
    }
 
    render() {
@@ -647,7 +747,9 @@ class Board extends React.Component {
                   {this.renderSpots(0, 4)}
                </div>
             </div>
-            <button onClick={() => this.execute_turn()}>{"Complete Player " + (this.state.turn + 1) + "'s turn"}</button>
+            <button onClick={() => this.execute_turn()}>
+               {"Complete Player " + (this.state.turn + 1) + "'s turn"}
+            </button>
          </>
       );
    }
