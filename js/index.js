@@ -11,6 +11,7 @@ const TRANS = [
    [2, -1, 0, 2, 0, -1],
    [1, -1, 1, 2, -1, 0],
    [0, 0, 1, 0, 1, 0],
+   //^--real to p  v-- p to real
    [0, 1, 0, 0, 0, 1],
    [0, 0, 1, 1, -1, 1], //fix ?
    [2, 0, -1, 2, -1, 0],
@@ -320,13 +321,12 @@ const moveStates = Object.freeze({
 class Human extends Player {
    constructor(name_in) {
       super(name_in);
+      super.update_pboard(JSON.parse(JSON.stringify(this.p_board)));
+      this.index = 0; //BIG DIFFERENCE BTWN PLAYERS AND BOTS (players don't have false perspectives)
    }
 
    turn(board_in) {
-      let i = this.index;
-      this.index = 0;
       super.update_pboard(JSON.parse(board_in));
-      this.index = i;
       this.move = {
          piece: -1,
          state: moveStates.UNMOVED,
@@ -402,6 +402,7 @@ class Board extends React.Component {
       });
    }
 
+   // !! TODO !! --> fix the alerts, they shld reset the board to original and also not alert
    handleClick(a, b) {
       let player = this.Players[this.state.turn];
       //ensure we are working with a human
@@ -416,12 +417,15 @@ class Board extends React.Component {
          player.update_pboard(JSON.parse(JSON.stringify(player.p_board)));
          //unhighlight all the pieces except selected piece, which must be highlighted
          if (index != player.move.piece) {
+            //click on an unselected piece
             this.highlight(a, b);
          } else {
+            //click on the selected piece
             let pieces = document.querySelectorAll("." + this.Players[this.state.turn].name);
             pieces.forEach(function (piece) {
                piece.removeAttribute('id');
             });
+            index = -1; //"unselects" the licked piece
          }
          player.move.state = moveStates.UNMOVED;
          player.move.piece = index;
@@ -569,8 +573,6 @@ class Board extends React.Component {
       pieces.forEach(function (piece) {
          piece.removeAttribute('id');
       });
-      //execute human turn
-      //...TODO...
       //execute bot turns until next human turn
       if (this.winner(this.state.turn)) {
          alert("Player" + (this.state.turn + 1) + " wins! ");
