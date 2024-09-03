@@ -3,6 +3,7 @@ let board = []; //2d representation of the game board
 const mc = [[0, 1], [1, 1], [1, 0], [0, -1], [-1, -1], [-1, 0]]; //move coefficients
 let numplayers = 2; //will be designated by user input (default 2 for testing)
 let max = 300;
+const SPEED = 50;
 
 const TRANS = [
    [0, 1, 0, 0, 0, 1],
@@ -94,6 +95,7 @@ class Bot extends Player {
       super(name_in);
    }
 
+   //TODO: somehow make the endgame smarter (can't decide how to win)
    turn(board_in_string) {
       const board_in = JSON.parse(board_in_string);
       super.update_pboard(board_in);
@@ -121,7 +123,6 @@ class Bot extends Player {
          this.best = -10;
          this.analyze_moves(1);
       }
-      console.log(this.best)
       return this.move;
    }
 
@@ -190,18 +191,37 @@ class Bot extends Player {
                   this.temp[a_0][b_0] = "pos";
                   this.temp[a_1][b_1] = this.name;
                   this.tpieces[piece] = [a_1, b_1];
+                  if (this.winner()) {
+                     this.curvalue += 15 * (4 - moveNum); // severely incentivises WINNING asap
+                  }
+                  //////////////////////////////////////////////////////////////////////////////
                   if (this.promising(moveNum)) {
                      this.analyze_moves(moveNum + 1);
+                  }
+                  //////////////////////////////////////////////////////////////////////////////
+                  if (this.winner()) {
+                     this.curvalue -= 15 * (4 - moveNum); // severely incentivises WINNING asap
                   }
                   this.tpieces[piece] = [a_0, b_0];
                   this.temp[a_0][b_0] = this.name;
                   this.temp[a_1][b_1] = "pos";
                } else {
+                  this.temp[a_0][b_0] = "pos";
+                  this.temp[a_1][b_1] = this.name;
+                  if (this.winner()) {
+                     this.curvalue += 15 * (4 - moveNum); // severely incentivises WINNING asap
+                  }
+                  ///////////////////////////////////////////////////////////////////////////
                   if (this.curvalue > this.best) {
-                     console.log('here')
                      this.best = this.curvalue;
                      this.move = this.curmove;
                   }
+                  /////////////////////////////////////////////////////////////////////////////
+                  if (this.winner()) {
+                     this.curvalue -= 15 * (4 - moveNum); // severely incentivises WINNING asap
+                  }
+                  this.temp[a_0][b_0] = this.name;
+                  this.temp[a_1][b_1] = "pos";
                }
                this.curvalue -= value * (0.9 ** ((moveNum - 1) * (numplayers - 1)));
             } else if (this.temp[a_1][b_1] != "n/a") {
@@ -306,6 +326,17 @@ class Bot extends Player {
       return true;
    }
 
+   winner() {
+      for (let i = 13; i < 17; i++) {
+         for (let j = i - 4; j < 13; j++) {
+            if (this.temp[i][j] != this.name) {
+               return false;
+            }
+         }
+      }
+      console.log('true! ' + this.index);
+      return true;
+   }
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -402,7 +433,6 @@ class Board extends React.Component {
       });
    }
 
-   // !! TODO !! --> fix the alerts, they shld reset the board to original and also not alert
    handleClick(a, b) {
       let player = this.Players[this.state.turn];
       //ensure we are working with a human
@@ -425,7 +455,7 @@ class Board extends React.Component {
             pieces.forEach(function (piece) {
                piece.removeAttribute('id');
             });
-            index = -1; //"unselects" the licked piece
+            index = -1; //"unselects" the clicked piece
          }
          player.move.state = moveStates.UNMOVED;
          player.move.piece = index;
@@ -433,7 +463,6 @@ class Board extends React.Component {
       else { //space
          if (player.move.piece === -1) {
             //you haven't selected a piece to move yet
-            alert("Select a piece to move first");
             return;
          }
          //check if valid place to move on according to unupdated move state;
@@ -444,8 +473,8 @@ class Board extends React.Component {
                && b === p[1] + mc[i][1]
                && this.state.spots[a][b] === "pos") {
                switch (player.move.state) {
-                  case (moveStates.JUMPING): alert("You cannot slide a piece after jumping it! Click a piece to reset your move.");
-                  case (moveStates.SLID): alert("You cannot slide a piece twice! Click a piece to reset your move.");
+                  case (moveStates.JUMPING): return;
+                  case (moveStates.SLID): return;
                   case (moveStates.UNMOVED): {
                      player.move.state = moveStates.SLID;
                      //move the piece (update board)
@@ -462,7 +491,8 @@ class Board extends React.Component {
                && this.state.spots[a][b] === "pos"
                && this.state.spots[p[0] + mc[i][0]][p[1] + mc[i][1]] !== "pos") {
                if (player.move.state === moveStates.SLID) {
-                  alert("You cannot jump a piece after sliding it! Click a piece to reset your move.");
+                  //You cannot jump a piece after sliding it! Click a piece to reset your move
+                  return;
                } else {
                   player.move.state = moveStates.JUMPING;
                   //move the piece (update board)
@@ -490,7 +520,11 @@ class Board extends React.Component {
       );
    }
 
-   bot_move(index, move) {
+   sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+   }
+
+   async bot_move(index, move) {
       const spots = JSON.parse(JSON.stringify(this.state.spots));
       const x = this.Players[index].pieces[move.piece];
       let t = TRANS[index + 6];
@@ -503,6 +537,10 @@ class Board extends React.Component {
       let y2 = 8 * t[3] + y[0] * t[4] + y[1] * t[5];
       spots[y1][y2] = this.Players[index].name
       this.state.spots = spots;
+      this.setState({
+         spots: this.state.spots,
+         turn: this.state.turn,
+      });
    }
 
    winner(index) {
@@ -544,11 +582,27 @@ class Board extends React.Component {
       });
    }
 
-   complete_bots() {
+   async complete_bots() {
       while (!(this.Players[this.state.turn].constructor.name === 'Human')) {
          let move = this.Players[this.state.turn].turn(JSON.stringify(this.state.spots));
          if (move) {
-            this.bot_move(this.state.turn, move); //this would be a good place to insert some sorta animation
+            //highlight initial spot of the piece about to move
+            let p = this.Players[this.state.turn].pieces[move.piece];
+            let t = TRANS[this.state.turn + 6];
+            this.highlight(8 * t[0] + p[0] * t[1] + p[1] * t[2], 8 * t[3] + p[0] * t[4] + p[1] * t[5]);
+            await this.sleep(SPEED);
+            let pieces = document.querySelectorAll("." + this.Players[this.state.turn].name);
+            pieces.forEach(function (piece) {
+               piece.removeAttribute('id');
+            });
+            this.bot_move(this.state.turn, move);
+            //highlight final place
+            p = move.dest;
+            this.highlight(8 * t[0] + p[0] * t[1] + p[1] * t[2], 8 * t[3] + p[0] * t[4] + p[1] * t[5]);
+            await this.sleep(SPEED);
+            pieces.forEach(function (piece) {
+               piece.removeAttribute('id');
+            });
          }
          if (this.winner(this.state.turn)) {
             this.setState({
@@ -559,12 +613,17 @@ class Board extends React.Component {
             return;
          }
          this.state.turn = (this.state.turn + 1) % 6;
-      }
+         this.setState({
+            spots: this.state.spots,
+            turn: this.state.turn,
+         });
+      };
    }
 
-   execute_turn() {
+   async execute_turn() {
       //check to see if you've moved your pieces yet
       if (this.Players[this.state.turn].move.state === moveStates.UNMOVED) {
+         //todo: change to a function call instead of an alert
          alert("Please move a piece before submitting!");
          return;
       }
@@ -575,15 +634,21 @@ class Board extends React.Component {
       });
       //execute bot turns until next human turn
       if (this.winner(this.state.turn)) {
+         //todo: change to a function call instead of an alert
          alert("Player" + (this.state.turn + 1) + " wins! ");
          return;
       }
       this.state.turn = (this.state.turn + 1) % 6;
-      this.complete_bots();
+      await this.complete_bots();
+      //need to await completion of this.complete_bots();
       this.Players[this.state.turn].turn(JSON.stringify(this.state.spots)); //updates next human's pieces
       this.setState({
          spots: this.state.spots,
          turn: this.state.turn,
+      });
+      pieces = document.querySelectorAll(".row>*");
+      pieces.forEach(function (piece) {
+         piece.removeAttribute('id');
       });
    }
 
