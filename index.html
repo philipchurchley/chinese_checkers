@@ -15,54 +15,62 @@
 <body>
    <header>
       <a href="#main-content" id="skip" tabindex="0">Skip to Main Content</a>
+      <!-- 
       <nav>
          <a href="index.html" class="current">home</a>
-      </nav>
+      </nav> 
+      -->
    </header>
    <main id="main-content">
+      <h1>Chinese Checkers Player</h1>
+      <div class="selection-menu">
+         <p style="font-weight: bold;">SELECT YOUR PLAYERS:</p>
+         <br>
+         <label class="p0" for="p1">Player 1 </label>
+         <select id="p1" name="p1">
+            <option value="Empty">Empty</option>
+            <option value="Bot">Bot</option>
+            <option value="Player">Player</option>
+         </select>
+         <br>
+         <label class="p1" for="p2">Player 2</label>
+         <select id="p2" name="p2">
+            <option value="Empty">Empty</option>
+            <option value="Bot">Bot</option>
+            <option value="Player">Player</option>
+         </select>
+         <br>
+         <label class="p2" for="p3">Player 3</label>
+         <select id="p3" name="p3">
+            <option value="Empty">Empty</option>
+            <option value="Bot">Bot</option>
+            <option value="Player">Player</option>
+         </select>
+         <br>
+         <label class="p3" for="p4">Player 4</label>
+         <select id="p4" name="p4">
+            <option value="Empty">Empty</option>
+            <option value="Bot">Bot</option>
+            <option value="Player">Player</option>
+         </select>
+         <br>
+         <label class="p4" for="p5">Player 5</label>
+         <select id="p5" name="p5">
+            <option value="Empty">Empty</option>
+            <option value="Bot">Bot</option>
+            <option value="Player">Player</option>
+         </select>
+         <br>
+         <label class="p5" for="p6">Player 6</label>
+         <select id="p6" name="p6">
+            <option value="Empty">Empty</option>
+            <option value="Bot">Bot</option>
+            <option value="Player">Player</option>
+         </select>
+      </div>
       <br>
-      <label for="p1">Player 1</label>
-      <select id="p1" name="p1">
-         <option value="Empty">Empty</option>
-         <option value="Bot">Bot</option>
-         <option value="Player">Player</option>
-      </select>
-      <br>
-      <label for="p2">Player 2</label>
-      <select id="p2" name="p2">
-         <option value="Empty">Empty</option>
-         <option value="Bot">Bot</option>
-         <option value="Player">Player</option>
-      </select>
-      <br>
-      <label for="p3">Player 3</label>
-      <select id="p3" name="p3">
-         <option value="Empty">Empty</option>
-         <option value="Bot">Bot</option>
-         <option value="Player">Player</option>
-      </select>
-      <br>
-      <label for="p4">Player 4</label>
-      <select id="p4" name="p4">
-         <option value="Empty">Empty</option>
-         <option value="Bot">Bot</option>
-         <option value="Player">Player</option>
-      </select>
-      <br>
-      <label for="p5">Player 5</label>
-      <select id="p5" name="p5">
-         <option value="Empty">Empty</option>
-         <option value="Bot">Bot</option>
-         <option value="Player">Player</option>
-      </select>
-      <br>
-      <label for="p6">Player 6</label>
-      <select id="p6" name="p6">
-         <option value="Empty">Empty</option>
-         <option value="Bot">Bot</option>
-         <option value="Player">Player</option>
-      </select>
       <div class="react-board"></div>
+      <br>
 
    </main>
    <footer>
@@ -96,6 +104,7 @@
    <script type="text/babel">
       ReactDOM.render(<Board />, document.querySelector(".react-board"));
    </script>
+
 </body>
 
 </html>

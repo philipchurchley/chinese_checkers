@@ -3,7 +3,7 @@ let board = []; //2d representation of the game board
 const mc = [[0, 1], [1, 1], [1, 0], [0, -1], [-1, -1], [-1, 0]]; //move coefficients
 let numplayers = 2; //will be designated by user input (default 2 for testing)
 let max = 300;
-const SPEED = 50;
+const SPEED = 800;
 
 const TRANS = [
    [0, 1, 0, 0, 0, 1],
@@ -95,7 +95,6 @@ class Bot extends Player {
       super(name_in);
    }
 
-   //TODO: somehow make the endgame smarter (can't decide how to win)
    turn(board_in_string) {
       const board_in = JSON.parse(board_in_string);
       super.update_pboard(board_in);
@@ -388,10 +387,11 @@ function Spot(props) {
          name={'[' + props.location[0] + ',' + props.location[1] + ']'} //string of location array, personally I think to be pretty clever
          onClick={props.onClick}
       >
-         {"" + props.location[0] + " " + props.location[1]}
       </button>
    );
 }
+
+//{ "" + props.location[0] + " " + props.location[1] }
 
 class Board extends React.Component {
    constructor(props) {
@@ -400,6 +400,14 @@ class Board extends React.Component {
          spots: JSON.parse(JSON.stringify(board)),
          turn: 0,
       }
+   }
+
+   componentDidMount() {
+      document.querySelector('.game-board').style.display = 'none';
+      document.querySelector('.turnsign').style.display = 'none';
+      document.querySelector('.execute').style.display = 'none';
+      document.querySelector('.selection-menu').style.display = 'block';
+      document.querySelector('.run').style.display = 'block';
    }
 
    playerFactory(playerType, tindex, name_in) {
@@ -557,7 +565,12 @@ class Board extends React.Component {
       return true;
    }
 
-   run() {
+   async run() {
+      document.querySelector('.game-board').style.display = 'block';
+      document.querySelector('.turnsign').style.display = 'block';
+      document.querySelector('.execute').style.display = 'block';
+      document.querySelector('.selection-menu').style.display = 'none';
+      document.querySelector('.run').style.display = 'none';
       max += 6
       numplayers = 0;
       this.state.spots = JSON.parse(JSON.stringify(board));
@@ -574,15 +587,21 @@ class Board extends React.Component {
          turn: this.state.turn,
       });
       numplayers = (numplayers <= 1) ? 2 : numplayers;
-      this.complete_bots();
+      await this.complete_bots();
       this.Players[this.state.turn].turn(JSON.stringify(this.state.spots)); //updates next human's pieces
       this.setState({
          spots: this.state.spots,
          turn: this.state.turn,
       });
+      let pieces = document.querySelectorAll("." + this.Players[this.state.turn].name);
+      pieces = document.querySelectorAll(".row>*");
+      pieces.forEach(function (piece) {
+         piece.removeAttribute('id');
+      });
    }
 
    async complete_bots() {
+      document.querySelector('.execute').style.display = 'none';
       while (!(this.Players[this.state.turn].constructor.name === 'Human')) {
          let move = this.Players[this.state.turn].turn(JSON.stringify(this.state.spots));
          if (move) {
@@ -609,6 +628,7 @@ class Board extends React.Component {
                spots: this.state.spots,
                turn: this.state.turn,
             });
+            //todo: change to function call instead of alert
             alert("player" + (this.state.turn + 1) + " wins! ");
             return;
          }
@@ -617,7 +637,8 @@ class Board extends React.Component {
             spots: this.state.spots,
             turn: this.state.turn,
          });
-      };
+      }
+      document.querySelector('.execute').style.display = 'block';
    }
 
    async execute_turn() {
@@ -655,8 +676,8 @@ class Board extends React.Component {
    render() {
       return (
          <>
-            <button onClick={() => this.run()}>run</button>
-            <p>Player {this.state.turn + 1}'s turn</p>
+            <button class="run" onClick={() => this.run()}>Play!</button>
+            <p class={"turnsign " + "p" + this.state.turn}>Player {this.state.turn + 1}'s turn</p>
             <div class="game-board">
                <div class="row">
                   {this.renderSpots(16, 12)}
@@ -814,7 +835,7 @@ class Board extends React.Component {
                   {this.renderSpots(0, 4)}
                </div>
             </div>
-            <button onClick={() => this.execute_turn()}>
+            <button class={"execute " + "p" + this.state.turn} onClick={() => this.execute_turn()}>
                {"Complete Player " + (this.state.turn + 1) + "'s turn"}
             </button>
          </>
