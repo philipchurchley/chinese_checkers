@@ -3,7 +3,7 @@ let board = []; //2d representation of the game board
 const mc = [[0, 1], [1, 1], [1, 0], [0, -1], [-1, -1], [-1, 0]]; //move coefficients
 let numplayers = 2; //will be designated by user input (default 2 for testing)
 let max = 300;
-const SPEED = 800;
+const SPEED = 300;
 
 const TRANS = [
    [0, 1, 0, 0, 0, 1],
@@ -406,7 +406,9 @@ class Board extends React.Component {
       document.querySelector('.game-board').style.display = 'none';
       document.querySelector('.turnsign').style.display = 'none';
       document.querySelector('.execute').style.display = 'none';
-      document.querySelector('.selection-menu').style.display = 'block';
+      document.querySelector('.winner').style.display = 'none';
+      document.querySelector('#error').style.display = 'none';
+      document.querySelector('.selection-menu').style.display = 'flex';
       document.querySelector('.run').style.display = 'block';
    }
 
@@ -628,8 +630,8 @@ class Board extends React.Component {
                spots: this.state.spots,
                turn: this.state.turn,
             });
-            //todo: change to function call instead of alert
-            alert("player" + (this.state.turn + 1) + " wins! ");
+            document.querySelector('.winner').style.display = 'flex';
+            document.querySelector('.winner>p').innerHTML = "Player" + (this.state.turn + 1) + " wins! ";
             return;
          }
          this.state.turn = (this.state.turn + 1) % 6;
@@ -645,9 +647,10 @@ class Board extends React.Component {
       //check to see if you've moved your pieces yet
       if (this.Players[this.state.turn].move.state === moveStates.UNMOVED) {
          //todo: change to a function call instead of an alert
-         alert("Please move a piece before submitting!");
+         document.querySelector('#error').style.display = 'block';
          return;
       }
+      document.querySelector('#error').style.display = 'none';
       //unhighlight the selected piece
       let pieces = document.querySelectorAll("." + this.Players[this.state.turn].name);
       pieces.forEach(function (piece) {
@@ -655,8 +658,8 @@ class Board extends React.Component {
       });
       //execute bot turns until next human turn
       if (this.winner(this.state.turn)) {
-         //todo: change to a function call instead of an alert
-         alert("Player" + (this.state.turn + 1) + " wins! ");
+         document.querySelector('.winner').style.display = 'flex';
+         document.querySelector('.winner>p').innerHTML = "Player" + (this.state.turn + 1) + " wins! ";
          return;
       }
       this.state.turn = (this.state.turn + 1) % 6;
@@ -835,9 +838,15 @@ class Board extends React.Component {
                   {this.renderSpots(0, 4)}
                </div>
             </div>
+            <p id="error">Please move a piece before submitting!</p>
             <button class={"execute " + "p" + this.state.turn} onClick={() => this.execute_turn()}>
                {"Complete Player " + (this.state.turn + 1) + "'s turn"}
             </button>
+            <div class="winner">
+               <p class="centered-element"></p>
+               <br></br>
+               <button class="centered-element" onClick={() => location.reload()}>OK</button>
+            </div>
          </>
       );
    }
