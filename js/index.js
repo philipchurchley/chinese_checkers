@@ -3,7 +3,7 @@ let board = []; //2d representation of the game board
 const mc = [[0, 1], [1, 1], [1, 0], [0, -1], [-1, -1], [-1, 0]]; //move coefficients
 let numplayers = 2; //will be designated by user input (default 2 for testing)
 let max = 300;
-const SPEED = 300;
+const SPEED = 50;
 
 const TRANS = [
    [0, 1, 0, 0, 0, 1],
@@ -185,6 +185,11 @@ class Bot extends Player {
                   this.curmove = moves.at(moves.length - 1);
                }
                let value = a_1 - a_0; //positive vertical progress
+               if (piece === 0) {
+                  if ((this.pieces[7][0] - this.pieces[0][0]) / 4 > 2)
+                     console.log((this.pieces[7][0] - this.pieces[0][0]) / 4)
+                  value += (this.pieces[7][0] - this.pieces[0][0]) / 4;
+               }
                this.curvalue += value * (0.9 ** ((moveNum - 1) * (numplayers - 1))); //basic accounting for opponent blocks (can improve later)
                if (moveNum < 3) {
                   this.temp[a_0][b_0] = "pos";
@@ -273,6 +278,9 @@ class Bot extends Player {
       let b_0 = this.tpieces[piece][1]; //old b
       let b_1 = position[1];  //new b
       let value = a_1 - a_0; //positive vertical progress
+      if (piece === 0) {
+         value += (this.pieces[7][0] - this.pieces[0][0]) / 4;
+      }
       this.curvalue += value * (0.9 ** ((moveNum - 1) * (numplayers - 1))); //basic accounting for opponent blocks (can improve later)
       if (moveNum < 3) {
          this.temp[a_0][b_0] = "pos";
